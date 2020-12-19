@@ -28,7 +28,31 @@ class NewBidForm(forms.Form):
         super().__init__(*args, **kwargs)
         style = "margin:10px; padding:4px; width:20%;"
         self.fields['bid'].label = False
-        self.fields['bid'].widget = forms.NumberInput(attrs={'style':style, 'placeholder':f'Bid Amount (Highest Bid is {self.max_bid})'})
+        if self.max_bid:
+            self.fields['bid'].widget = forms.NumberInput(attrs={'style':style, 'placeholder':f'Bid Amount (Current Bid is {self.max_bid})'})
+        else:
+            self.fields['bid'].widget = forms.NumberInput(attrs={'style':style, 'placeholder':'There are no bids'})
+
+class NewCommentForm(forms.Form):
+    comment = forms.CharField(label=False, widget=forms.Textarea(attrs={'style':"margin:10px; padding:4px; width:90%;", 'placeholder':"Put your comment here."}))
+
+def listing_page_data(request, listing_id):
+    listing = Listings.objects.get(pk = listing_id)
+    if request.user.is_authenticated:
+        watchlist_bool = True if listing in request.user.watchlist.all() else False
+    else:
+        watchlist_bool = None
+    data_dict = {
+        "number_of_bids": Bids.objects.filter(listing = listing_id).count(),
+        "listing":listing,
+        "owner": ListingOwners.objects.get(listing = listing),
+        "watchlist_bool": watchlist_bool,
+        "new_comment_form": NewCommentForm(),
+        "comments": Comments.objects.filter(listing = listing)
+    }
+    return data_dict
+        
+        
 
 def index(request):
     listings = Listings.objects.all()
@@ -96,18 +120,10 @@ def new_listing(request):
     if request.method == "POST":
         form = NewListingForm(request.POST)
         if form.is_valid():
-            title = form.cleaned_data["title"]
-            description = form.cleaned_data["description"]
-            starting_bid = form.cleaned_data["starting_bid"]
-            image = form.cleaned_data["image"]
-            category = form.cleaned_data["category"]
-                
-            listing_object = Listings(title=title, description=description, starting_bid=starting_bid, image=image, category=category)
+
+            listing_object = Listings(title=form.cleaned_data["title"], description=form.cleaned_data["description"], starting_bid=form.cleaned_data["starting_bid"], image=form.cleaned_data["image"], category=form.cleaned_data["category"])
             listing_object.save()
-            
-            bid_0 = Bids(amount = starting_bid, listing = listing_object, bidders=request.user)
-            bid_0.save()
-            
+
             owner = ListingOwners(listing = listing_object, user = request.user)
             owner.save()
             
@@ -128,22 +144,36 @@ def new_listing(request):
 def listing(request, listing_id):
     listing = Listings.objects.get(pk=listing_id)
     owner = ListingOwners.objects.get(listing = listing)
-    if request.user.is_authenticated:
-        watchlist_bool = True if listing in request.user.watchlist.all() else False
+    #if request.user.is_authenticated:
+        #watchlist_bool = True if listing in request.user.watchlist.all() else False
+    #else:
+        #watchlist_bool = None
+    #try:
+    if Bids.objects.filter(listing = listing_id).count() == 0:
+        max_bid = (listing.starting_bid - 1)
     else:
-        watchlist_bool = None
-    try:
-        max_bid = Bids.objects.filter(listing__pk=listing_id).aggregate(Max('amount'))['amount__max']
-    except TypeError:
-        max_bid=1
-    return render(request, "auctions/listings.html", {
-        "number_of_bids": Bids.objects.all().count() - 1,
+        max_bid = Bids.objects.filter(listing__pk = listing_id).aggregate(Max('amount'))['amount__max']
+    #except TypeError:
+        #max_bid=1
+        
+    if max_bid + 1 == listing.starting_bid:
+        form = NewBidForm(max_bid = None)
+    else:
+        form = NewBidForm(max_bid=max_bid)
+    page_data = listing_page_data(request, listing_id)
+    page_data["new_bid_form"] = form
+    page_data["max_bid_user"] = Bids.objects.filter(listing = listing_id).get(amount = max_bid).bidders if Bids.objects.filter(listing = listing_id) else None
+    return render(request, "auctions/listings.html", page_data)
+    
+    """
+    { listing_page_data(
+        "number_of_bids": Bids.objects.filter(listing = listing_id).count(),
         "listing":listing,
         "owner": owner,
         "watchlist_bool": watchlist_bool,
-        "new_bid_form": NewBidForm(max_bid=max_bid),
-        "max_bid_user": Bids.objects.get(amount = max_bid).bidders
-    })
+        "new_bid_form": form,
+        "max_bid_user": Bids.objects.filter(listing = listing_id).get(amount = max_bid).bidders if Bids.objects.filter(listing = listing_id) else None ## I need to make it so the first bid is the actual first bid, not just the starting bid.
+    })"""
     
 def add_to_watchlist(request, listing_id):
     listing = Listings.objects.get(pk=listing_id)
@@ -156,16 +186,26 @@ def add_to_watchlist(request, listing_id):
     
 def bid(request, listing_id):
     if request.method == 'POST':
-        try:
-            max_bid = Bids.objects.filter(listing__pk = listing_id).aggregate(Max('amount'))['amount__max']
-        except TypeError:
-            max_bid=1
-        listing = Listings.objects.get(pk = listing_id)
-        if request.user.is_authenticated:
-            watchlist_bool = True if listing in request.user.watchlist.all() else False
+    
+        page_data = listing_page_data(request, listing_id)
+        
+        if Bids.objects.filter(listing = listing_id).count() == 0:
+            max_bid = Listings.objects.get(pk=listing_id).starting_bid - 1
         else:
-            watchlist_bool = None
+            max_bid = Bids.objects.filter(listing__pk = listing_id).aggregate(Max('amount'))['amount__max']
+
+        listing = Listings.objects.get(pk = listing_id)
+        #if request.user.is_authenticated:
+            #watchlist_bool = True if listing in request.user.watchlist.all() else False
+        #else:
+            #watchlist_bool = None
         form = NewBidForm(request.POST, max_bid = max_bid)
+        if max_bid + 1 == listing.starting_bid:
+            form = NewBidForm(request.POST, max_bid = None)
+            
+        page_data["new_bid_form"] = form
+        page_data["max_bid_user"] = Bids.objects.filter(listing = listing_id).get(amount = max_bid).bidders if Bids.objects.filter(listing = listing_id) else None
+        
         if form.is_valid():
             bid = form.cleaned_data["bid"]
             if bid > max_bid:
@@ -174,23 +214,32 @@ def bid(request, listing_id):
                 
                 return HttpResponseRedirect(reverse("listing", args=[listing_id]))
             else:
-                return render(request, "auctions/listings.html", {
-                "number_of_bids": Bids.objects.all().count() - 1,
+                page_data["error_message"] = "Please put in a bid greater than the current bid."
+              
+                
+                
+                return render(request, "auctions/listings.html", page_data)
+                """{
+                "number_of_bids": Bids.objects.filter(listing = listing_id).count(),
                 "listing":Listings.objects.get(pk=listing_id),
                 "owner": ListingOwners.objects.get(listing = listing_id),
                 "watchlist_bool": watchlist_bool,
-                "new_bid_form": form
-            })
+                "new_bid_form": form,
+                "max_bid_user": Bids.objects.filter(listing = listing_id).get(amount = max_bid).bidders if Bids.objects.filter(listing = listing_id) else None,
+                "error_message": "Please put in a bid greater than the current bid."
+            })"""
             
         else:
             
-            return render(request, "auctions/listings.html", {
-                "number_of_bids": Bids.objects.all().count() - 1,
+            return render(request, "auctions/listings.html", page_data)
+            """{
+                "number_of_bids": Bids.objects.filter(listing = listing_id).count(),
                 "listing":Listings.objects.get(pk=listing_id),
                 "owner": ListingOwners.objects.get(listing = listing_id),
                 "watchlist_bool": watchlist_bool,
+                "max_bid_user": Bids.objects.filter(listing = listing_id).get(amount = max_bid).bidders  if Bids.objects.filter(listing = listing_id) else None,
                 "new_bid_form": form
-            })
+            })"""
         
     else:
         return HttpResponseRedirect(reverse('listing', args=[listing_id]))
@@ -206,4 +255,41 @@ def view_watchlist(request):
         "listings": listings,
         "title": f"{request.user}'s Watchlist"
     })
+    
+def comment(request, listing_id):
+    if request.method == "POST":
+    
+        page_data = listing_page_data(request, listing_id)
+        listing = Listings.objects.get(pk = listing_id)
+        
+        
+        if Bids.objects.filter(listing = listing_id).count() == 0:
+            max_bid = (listing.starting_bid - 1)
+        else:
+            max_bid = Bids.objects.filter(listing__pk = listing_id).aggregate(Max('amount'))['amount__max']
+        if max_bid + 1 == listing.starting_bid:
+            bid_form = NewBidForm(max_bid = None)
+        else:
+            bid_form = NewBidForm(max_bid=max_bid)
+            
+        page_data["new_bid_form"] = bid_form
+        page_data["max_bid_user"] = Bids.objects.filter(listing = listing_id).get(amount = max_bid).bidders if Bids.objects.filter(listing = listing_id) else None
+        
+        form = NewCommentForm(request.POST)
+        
+        if form.is_valid():
+            comment = form.cleaned_data["comment"]
+            
+            new_comment = Comments(comment = comment, listing = Listings.objects.get(pk=listing_id), user = request.user)
+            new_comment.save()
+            
+            return HttpResponseRedirect(reverse("listing", args=[listing_id]))
+            
+        else:
+            page_date["new_comment_form"] = NewCommentForm(request.POST)
+            return render(request, "auctions/listings.html", page_data)
+        
+    else:
+        return HttpResponseRedirect(reverse('listing', args=[listing_id]))
+        
     

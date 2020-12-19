@@ -32,13 +32,38 @@ Starting bid: ${{ listing.starting_bid }}
 	<form method="post" action="{% url 'bid' listing.id%}">
 		{% csrf_token %}
 		{{ new_bid_form }}
+		{% if error_message %}
+			<strong>{{ error_message}}</strong>
+		{% endif %}
 		<br>
 		<input type="submit", style="margin:10px; padding:4px; width:10%;">
 	</form>
 	
+	
 {% endif %}
 
 Time Created: {{ listing.time_created }} GMT
+
+<br>
+<br>
+<h3>Comments</h3>
+{% for comment in comments %}
+	<div style="border:2px solid black"
+		<p>{{ comment.comment }}</p>
+		by <strong>{{ comment.user }}</strong>.
+	</div>
+{% endfor %}
+
+{% if user.is_authenticated %}
+	Put your comment here:
+	<form method="post" action="{% url 'comment' listing.id%}">
+		{% csrf_token %}
+		{{ new_comment_form }}
+
+		<br>
+		<input type="submit", style="margin:10px; padding:4px; width:10%;">
+	</form>
+{% endif %}
 
 
 

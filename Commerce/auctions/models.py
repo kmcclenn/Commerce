@@ -47,6 +47,7 @@ class Bids(models.Model):
 class Comments(models.Model):
     comment = models.TextField()
     listing = models.ForeignKey(Listings, on_delete=models.CASCADE, related_name="comments")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comments")
     
     class Meta: 
         verbose_name_plural = 'Comments'
