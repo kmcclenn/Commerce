@@ -1,0 +1,47 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+<div style="text-align: center;">
+<h1>{{ listing.title }}</h1>
+
+{% if listing.image %}
+	<img width=50% src = "{{ listing.image }}"><br>
+{% endif %}
+Listed by <b>{{ owner.user.username }}</b><br>
+Starting bid: ${{ listing.starting_bid }}
+{% if listing.category %}
+	<br>Category: {{ listing.category }}
+{% else %}
+	<br>No category listed
+{% endif %}
+
+{% if user.is_authenticated %}
+	<a class="btn btn-primary" href="{% url 'add_to_watchlist' listing.id %}">
+		{% if watchlist_bool %}
+			Remove Item from Watchlist!
+		{% else %}
+			Add Item to Watchlist!
+		{% endif %}
+	</a>
+	
+	Place a bid <span style="font-size:15px;">(There are {{ number_of_bids }} bids)</span>.
+	{% if user == max_bid_user %}
+		You have the highest bid.
+	{% endif %}
+	
+	<form method="post" action="{% url 'bid' listing.id%}">
+		{% csrf_token %}
+		{{ new_bid_form }}
+		<br>
+		<input type="submit", style="margin:10px; padding:4px; width:10%;">
+	</form>
+	
+{% endif %}
+
+Time Created: {{ listing.time_created }} GMT
+
+
+
+</div>
+
+{% endblock %}
