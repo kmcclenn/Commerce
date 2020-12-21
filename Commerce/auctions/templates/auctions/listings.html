@@ -1,28 +1,61 @@
 {% extends "auctions/layout.html" %}
 
 {% block body %}
-<div style="text-align: center;">
 <h1>{{ listing.title }}</h1>
 
-{% if listing.image %}
-	<img width=50% src = "{{ listing.image }}"><br>
+<p>
+{% if not listing.active %} 
+	<h2>Listing is closed.</h2>
+	No more bids can be placed on it.
+	{% if user == max_bid_user %}
+		<strong>Your bid of ${{ max_bid }} has won the auction!</strong>
+	{% endif %}
 {% endif %}
-Listed by <b>{{ owner.user.username }}</b><br>
-Starting bid: ${{ listing.starting_bid }}
-{% if listing.category %}
-	<br>Category: {{ listing.category }}
-{% else %}
-	<br>No category listed
-{% endif %}
+</p>
 
-{% if user.is_authenticated %}
-	<a class="btn btn-primary" href="{% url 'add_to_watchlist' listing.id %}">
-		{% if watchlist_bool %}
-			Remove Item from Watchlist!
+{% if listing.image %}
+	<img width=50% src = "{{ listing.image }}" style="text-align: center;"><br>
+{% endif %}
+<h5>Details:</h5>
+<ul>
+	<li>Listed by <b>{{ owner.user.username }}</b><br></li>
+	<li>Starting bid: ${{ listing.starting_bid }}</li>
+	<li>
+		{% if listing.category %}
+			Category: {{ listing.category }}
 		{% else %}
-			Add Item to Watchlist!
+			No category listed
 		{% endif %}
-	</a>
+	</li>
+	<li>Time Created: {{ listing.time_created }} GMT</li>
+</ul>
+<br>
+<br>
+<h5>Actions:</h5>
+<ul>
+	{% if owner.user == user and listing.active %}
+		<li><a href="{% url 'close_listing' listing.id %}" class="btn btn-primary">
+			Close this auction
+		</a></li>
+	{% endif %}
+	{% if user.is_authenticated and listing.active %}
+		<li><a class="btn btn-primary" href="{% url 'add_to_watchlist' listing.id %}">
+			{% if watchlist_bool %}
+				Remove Item from Watchlist!
+			{% else %}
+				Add Item to Watchlist!
+			{% endif %}
+		</a></li>
+	{% elif not user.is_authenticated %}
+		<li><a href="{% url 'login' %}">Sign in</a> to add this item to watchlist, place bids, add comments, etc.</li>
+	{% endif %}
+	
+</ul>
+<br>
+<br>
+
+{% if user.is_authenticated and listing.active %}
+	
 	
 	Place a bid <span style="font-size:15px;">(There are {{ number_of_bids }} bids)</span>.
 	{% if user == max_bid_user %}
@@ -42,15 +75,13 @@ Starting bid: ${{ listing.starting_bid }}
 	
 {% endif %}
 
-Time Created: {{ listing.time_created }} GMT
-
 <br>
 <br>
 <h3>Comments</h3>
 {% for comment in comments %}
-	<div style="border:2px solid black"
+	<div style="border:2px solid black; margin: 5px;">
 		<p>{{ comment.comment }}</p>
-		by <strong>{{ comment.user }}</strong>.
+		by <strong>{{ comment.user }}</strong>
 	</div>
 {% endfor %}
 
@@ -67,6 +98,5 @@ Time Created: {{ listing.time_created }} GMT
 
 
 
-</div>
-
 {% endblock %}
+

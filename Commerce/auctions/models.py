@@ -4,12 +4,14 @@ from django.db import models
 
     
 class Listings(models.Model):
+    choices = [(None, "Choose Category"), ("Toys", "Toys"), ("Electronics", "Electronics")] # change choose category to no category ... add more categories...
     title = models.CharField(max_length = 64)
     description = models.TextField()
     starting_bid = models.IntegerField()
     image = models.URLField(blank=True)
-    category = models.CharField(max_length = 64, blank=True)
+    category = models.CharField(max_length = 64, default = None, choices = choices)
     time_created = models.DateTimeField(auto_now_add = True)
+    active = models.BooleanField(default = True)
     
     def __str__(self):
         return f"{self.title.capitalize()} (Starting Bid: {self.starting_bid})"

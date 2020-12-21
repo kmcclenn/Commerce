@@ -1,0 +1,13 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+	<div style="text-align: center;">
+		<h1>View All Categories</h1>
+		<h3>Click on any category to see its listings</h3>
+	</div>
+	<ul>
+	{% for choice in choices %}
+		<li><a href="{% url 'specific_category' choice %}">choice</a></li>
+	{% endfor %}
+	</ul>
+{% endblock %}
