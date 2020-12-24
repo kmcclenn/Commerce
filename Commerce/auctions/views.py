@@ -10,7 +10,7 @@ from django.db.models import Max
 from .models import User, Listings, Comments, Bids, ListingOwners
 
 class NewListingForm(forms.Form):
-    category_choices = [(None, "Choose Category"), ("Toys", "Toys"), ("Electronics", "Electronics")]
+    category_choices = Listings._meta.get_field('category').choices
     style = "margin:10px; padding:4px; width:20%;"
     title = forms.CharField(label=False, widget=forms.TextInput(attrs={'style':style, 'placeholder':"Title"}))
     description = forms.CharField(label=False, widget=forms.Textarea(attrs={'style':"margin:10px; padding:4px; width:90%;", 'placeholder':"Description"}))
@@ -307,6 +307,9 @@ def close_listing(request, listing_id):
     return HttpResponseRedirect(reverse('listing', args=[listing_id]))
     
 def categories(request):
+    choices = Listings._meta.get_field('category').choices
+    #choices.remove((None, 'Choose Category'))
+    
     ## I don't know the syntax for this yet, but lets say that choices = a list of the human-readable name of categories. I can add the syntax in later.
     return render(request, "auctions/categories.html", {
         "choices": choices
@@ -314,7 +317,10 @@ def categories(request):
 
 def specific_category(request, category_name):
     listings = Listings.objects.filter(category = category_name.capitalize())
-    owners = ListingOwners.objects.filter(listing = listings) # i don't think this is going to work bc listings is a queryset which isn't equal to only one listing. but worth a try when internet
+    owners = []
+    for listing in list(listings):
+        owners.append(ListingOwners.objects.get(listing = listing))
+    #owners = ListingOwners.objects.filter(listing = listings) # i don't think this is going to work bc listings is a queryset which isn't equal to only one listing. but worth a try when internet
     return render(request, "auctions/index.html", {
         "listings": list(zip(listings, owners)),
         "title": f"{category_name.capitalize()} Listings"
