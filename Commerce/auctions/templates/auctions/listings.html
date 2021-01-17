@@ -3,6 +3,10 @@
 {% block body %}
 <h1>{{ listing.title }}</h1>
 
+{% if error_message %}
+	<strong>{{ error_message}}</strong>
+{% endif %}
+
 <p>
 {% if not listing.active %} 
 	<h2>Listing is closed.</h2>
@@ -52,7 +56,6 @@
 	
 </ul>
 <br>
-<br>
 
 {% if user.is_authenticated and listing.active %}
 	
@@ -69,7 +72,7 @@
 			<strong>{{ error_message}}</strong>
 		{% endif %}
 		<br>
-		<input type="submit", style="margin:10px; padding:4px; width:10%;">
+		<input type="submit" class="submit">
 	</form>
 	
 	
@@ -78,21 +81,25 @@
 <br>
 <br>
 <h3>Comments</h3>
+{% if not listing.active %}
+	<b>The listing is closed. You cannot add any more comments.</b>
+{% endif %}
 {% for comment in comments %}
-	<div style="border:2px solid black; margin: 5px;">
+	<div class="comment">
 		<p>{{ comment.comment }}</p>
 		by <strong>{{ comment.user }}</strong>
 	</div>
+	<br>
 {% endfor %}
 
-{% if user.is_authenticated %}
+{% if user.is_authenticated and listing.active %}
 	Put your comment here:
 	<form method="post" action="{% url 'comment' listing.id%}">
 		{% csrf_token %}
 		{{ new_comment_form }}
 
 		<br>
-		<input type="submit", style="margin:10px; padding:4px; width:10%;">
+		<input type="submit" class="submit">
 	</form>
 {% endif %}
 

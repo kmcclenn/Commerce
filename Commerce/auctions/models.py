@@ -1,10 +1,8 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-
-
     
 class Listings(models.Model):
-    choices = [(None, "Choose Category"), ("Toys", "Toys"), ("Electronics", "Electronics")] # change choose category to no category ... add more categories...
+    choices = [(None, "Choose Category"), ("Toys", "Toys"), ("Electronics", "Electronics"), ("Fashion", "Fashion"), ("Home", "Home"), ("Arts and Crafts", "Arts and Crafts"), ("Books", "Books"), ("Vehicles", "Vehicles")] # change choose category to no category ... add more categories...
     title = models.CharField(max_length = 64)
     description = models.TextField()
     starting_bid = models.IntegerField()

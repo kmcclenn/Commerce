@@ -26,7 +26,7 @@ class NewBidForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self.max_bid = kwargs.pop('max_bid', -1)
         super().__init__(*args, **kwargs)
-        style = "margin:10px; padding:4px; width:20%;"
+        style = "margin:10px; padding:4px; width:30%;"
         self.fields['bid'].label = False
         if self.max_bid:
             self.fields['bid'].widget = forms.NumberInput(attrs={'style':style, 'placeholder':f'Bid Amount (Current Bid is {self.max_bid})'})

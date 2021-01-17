@@ -2,10 +2,14 @@
 
 {% block body %}
     <h2>{{ title }}</h2>
+
+	{% if not listings %}
+		There are no listings.
+	{% endif %}
     {% for listing in listings %}
 		
 		{% if listing.0.active %}
-			<div class = "container" style="margin: 15px; border: 2px solid black; width: 50%;">
+			<div class = "container listing">
 				<div class = "row">
 					<div class = "col-6">
 						<a href="{% url 'listing' listing.0.id %}"><h4>{{ listing.0.title }}</h4></a>
