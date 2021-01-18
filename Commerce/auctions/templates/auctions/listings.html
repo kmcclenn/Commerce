@@ -20,9 +20,11 @@
 {% if listing.image %}
 	<img width=50% src = "{{ listing.image }}" style="text-align: center;"><br>
 {% endif %}
+<h4>${{ current_price }}</h4>
 <h5>Details:</h5>
 <ul>
 	<li>Listed by <b>{{ owner.user.username }}</b><br></li>
+	<li>Current Price: ${{ current_price }}</li>
 	<li>Starting bid: ${{ listing.starting_bid }}</li>
 	<li>
 		{% if listing.category %}

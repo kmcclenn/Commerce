@@ -14,7 +14,7 @@
 					<div class = "col-6">
 						<a href="{% url 'listing' listing.0.id %}"><h4>{{ listing.0.title }}</h4></a>
 						<p>{{ listing.0.description }}</p>
-						<b>Starting Bid:</b> ${{ listing.0.starting_bid }}
+						<b>Current Price:</b> ${{ listing.2 }}
 						{% if listing.0.category %}
 							<br>Category: {{ listing.0.category }}
 						{% endif %}

@@ -51,6 +51,11 @@ def listing_page_data(request, listing_id):
         max_bid = (listing.starting_bid - 1) # The max bid is the starting bid minus 1 so that the user can bid the starting bid also
     else:
         max_bid = Bids.objects.filter(listing__pk = listing_id).aggregate(Max('amount'))['amount__max'] # Otherwise, the max bid is the maximum of all the bids
+        
+    current_price = max_bid
+    if current_price + 1 == listing.starting_bid:
+        current_price += 1
+        
     data_dict = {
         "number_of_bids": Bids.objects.filter(listing = listing_id).count(),
         "listing":listing,
@@ -60,7 +65,9 @@ def listing_page_data(request, listing_id):
         "comments": Comments.objects.filter(listing = listing),
         "max_bid": max_bid,
         "max_bid_user": Bids.objects.filter(listing = listing_id).get(amount = max_bid).bidders if Bids.objects.filter(listing = listing_id) else None, #Gets the user attributed to the maximum bid ONLY if there are bids on the listing
-        "new_bid_form": NewBidForm(max_bid=max_bid)
+        "new_bid_form": NewBidForm(max_bid=max_bid),
+        "current_price": current_price # This is the current price of the object, similar to max_bid but if there are no bids then it equals the starting bid
+        
     }
     return data_dict
         
@@ -69,8 +76,13 @@ def listing_page_data(request, listing_id):
 def index(request):
     listings = Listings.objects.all()
     owners = ListingOwners.objects.all()
+    current_prices = []
+    for listing in listings: # adds each listing's current price to another list
+        current_price = listing_page_data(request, listing.id)['current_price']
+        current_prices.append(current_price)
+    
     return render(request, "auctions/index.html", {
-        "listings": list(zip(listings, owners)),
+        "listings": list(zip(listings, owners, current_prices)),
         "title": "Active Listings"
     })
 
@@ -213,9 +225,9 @@ def bid(request, listing_id):
 def view_watchlist(request):
     watchlist = User.objects.get(pk = request.user.id).watchlist.all()
     listings = []
-    for item in watchlist: # creates a list of tuples that contain the item in the watchlist and its owner
-        listings.append((item, ListingOwners.objects.get(listing = item).user))
-    
+    for item in watchlist: # creates a list of tuples that contain the item in the watchlist, its owner, and its current price
+        current_price = listing_page_data(request, item.id)['current_price']
+        listings.append((item, ListingOwners.objects.get(listing = item).user, current_price))
     return render(request, "auctions/index.html", {
         "listings": listings,
         "title": f"{request.user}'s Watchlist"
@@ -246,11 +258,17 @@ def comment(request, listing_id):
     else:
         return HttpResponseRedirect(reverse('listing', args=[listing_id]))
         
-#closes the listing by making it not active
+#closes the listing by making it not active, deleting its category, and removing it from any watchlist
 def close_listing(request, listing_id):
     updated_listing = Listings.objects.get(pk=listing_id)
     updated_listing.active = False
+    updated_listing.category = "Choose Category"
     updated_listing.save()
+    
+    users = User.objects.all()
+    for user in users:
+        if updated_listing in user.watchlist.all():
+            user.watchlist.remove(updated_listing)  
     return HttpResponseRedirect(reverse('listing', args=[listing_id]))
 
 # gets all of the categories and renders a HTML page that displays them
@@ -264,9 +282,13 @@ def categories(request):
 def specific_category(request, category_name):
     listings = Listings.objects.filter(category = category_name.capitalize())
     owners = []
-    for listing in list(listings): # creates a list of each owner of the listings of the specific category
+    current_prices = []
+    for listing in list(listings): # creates a list of each owner of the listings of the specific category and a list of the current price of each listing of the category
         owners.append(ListingOwners.objects.get(listing = listing))
+        current_price = listing_page_data(request, listing.id)['current_price']
+        current_prices.append(current_price)
+          
     return render(request, "auctions/index.html", {
-        "listings": list(zip(listings, owners)),
+        "listings": list(zip(listings, owners, current_prices)),
         "title": f"{category_name.capitalize()} Listings"
     })
