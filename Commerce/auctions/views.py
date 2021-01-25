@@ -227,7 +227,7 @@ def view_watchlist(request):
     listings = []
     for item in watchlist: # creates a list of tuples that contain the item in the watchlist, its owner, and its current price
         current_price = listing_page_data(request, item.id)['current_price']
-        listings.append((item, ListingOwners.objects.get(listing = item).user, current_price))
+        listings.append((item, ListingOwners.objects.get(listing = item), current_price))
     return render(request, "auctions/index.html", {
         "listings": listings,
         "title": f"{request.user}'s Watchlist"
